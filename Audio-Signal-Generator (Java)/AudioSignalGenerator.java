@@ -1,187 +1,106 @@
-public class BCH {
+import javax.sound.sampled.*;
+import javax.swing.*;
+import java.util.ArrayList;
+
+public class AudioSignalGenerator {
 
 
-    public static boolean debug = false;
+    //Beware only tested on windows
+
+    public static ArrayList<String> messageDataArray = new ArrayList<String>();
+
+    public static byte amplitude = 30; // max 127?
+    public static byte allowNegativeAmplitude = 1; // 1 or 0    1 = with negative Amplitude
+    public static int speed = 512; //transmission speed
 
 
-    public static long calculatePolynomialRemainder(long ShiftedData, int fullLength, long generator, int generatorLength){
-
-        long remainder = 0;
-
-        for(int i = fullLength; i > 0; i--){
-
-            //append the remainder with the next bit of data from data
-            remainder = (remainder << 1)^((ShiftedData >> (i-1))&1);
-
-            if(debug) {
-                System.out.println("Remainder: " + Long.toBinaryString(remainder));
-            }
-            //checks if the bit of the remainder that has the same location as the MSB of the generator is 1 (bit)
-            if((remainder >> (generatorLength - 1)&1) == 1){
-                remainder = remainder^generator;
-                if(debug) {
-                    System.out.println("XOR");
-                }
-            }
-
-        }
-
-        if(debug) {
-            System.out.println("End Remainder: " + Long.toBinaryString(remainder) + "\n");
-        }
-        return remainder;
-    }
-
-    public static long generateBCH(long data, int dataLength, long generator, int generatorLength, int fullLength){
-
-        //append data with 0 generator length
-        long ShiftedData = data << (fullLength - dataLength); //BCH length (generator - 1)
-
-        System.out.println("\nGenerating BCH Code: \n");
-
-        System.out.println("BCH(" + fullLength + "," + dataLength + ")\n");
-
-        long remainder = calculatePolynomialRemainder(ShiftedData, fullLength, generator, generatorLength);
-        System.out.println("BCH Remainder: " + Long.toBinaryString(remainder));
-        long newBCH = ShiftedData^remainder;
-        System.out.println("\nNew BCH: " + Long.toBinaryString(newBCH) + "\n");
-
-        return newBCH;
-    }
-
-    public static boolean checkBCH(long fullCode, int codeLength, long generator, int generatorLength){
-
-        System.out.println("Checking BCH Code ....\n");
-
-        long remainder = calculatePolynomialRemainder(fullCode, codeLength, generator, generatorLength);
-        System.out.println("BCH Remainder: " + Long.toBinaryString(remainder));
-        return remainder == 0;
-    }
+    private static SourceDataLine sdl;
 
 
-    public static long singleBitErrorCorrection(long bchCode, int codeLength, long generator, int generatorLength){
+    public static void setupAudio() throws LineUnavailableException {
 
-        long tempcode = 0;
 
-        for(int i = -1; i < codeLength; i++){
+        AudioFormat af = new AudioFormat((float) 44100, 8, 1, true, false);
+        Mixer.Info[] infos = AudioSystem.getMixerInfo();
+        Mixer.Info mixerinfo = null;
 
-            tempcode = bchCode^(1<<i);
-            //to check the code if errors exist
-            if(i == -1){
-                tempcode = bchCode;
-            }
-            long remainder = calculatePolynomialRemainder(tempcode, codeLength, generator, generatorLength);
-            if(remainder == 0){
-                if(bchCode != tempcode) {
-                    System.out.println("\nCorrected Code found: " + Long.toBinaryString(tempcode));
-                }
-                return tempcode;
+        ArrayList<String> soundoptions = new ArrayList<String>();
+
+        for (Mixer.Info inf : infos) {
+            if (inf.getDescription().equals("Direct Audio Device: DirectSound Playback")) {
+                soundoptions.add(inf.getName());
             }
         }
-        System.out.println("One bit error correction failed");
-        return 0;
+
+        String input = (String) JOptionPane.showInputDialog(null, "Choose Sound Output",
+                "Sound Card Chooser", JOptionPane.QUESTION_MESSAGE, null, // Use
+                // default
+                // icon
+                soundoptions.toArray(), // Array of choices
+                soundoptions.toArray()[0]); // Initial choice
+
+        for (Mixer.Info inf : infos) {
+            if (inf.getName().equals(input)) {
+                mixerinfo = inf;
+            }
+        }
+
+        sdl = AudioSystem.getSourceDataLine(af, mixerinfo);
+
+        sdl.open();
+        sdl.start();
+    }
+
+    public static void closeAudio() {
+        sdl.drain();
+        sdl.stop();
     }
 
 
-    public static long dualBitErrorCorrection(long bchCode, int codeLength, long generator, int generatorLength){
+    public static void sendAudio() {
 
-        long secondtempcode = 0;
-        long firsttempcode = 0;
+        int interval = 0;
+        byte[] buf = new byte[1];
 
-        for(int x = 0; x < codeLength; x++) {
-            firsttempcode = bchCode ^ (1 << x);
-            for (int i = -1; i < codeLength; i++) {
-                secondtempcode = firsttempcode ^ (1 << i);
+        for (String message : messageDataArray) {
+            for (int i = 0; i < message.length(); i++) {
 
-                //used for -1 shift
-                if (i == -1) {
-                    secondtempcode = firsttempcode;
-                }
 
-                long remainder = calculatePolynomialRemainder(secondtempcode, codeLength, generator, generatorLength);
-                if (remainder == 0) {
-                    if(secondtempcode != bchCode) {
-                        System.out.println("\nCorrected Code found: " + Long.toBinaryString(secondtempcode));
-                    }
-                    return secondtempcode;
+                //  interval = ((int) ((i / ((double) 44100)) 0* speed)) % 2;
+                interval = message.charAt(i) - 48;
+
+
+                for (int x = 0; x < 44100 / speed; x++) {
+                    int value = amplitude * (1 + (-(1 + allowNegativeAmplitude)) * interval);
+                    // System.out.println(value);
+                    buf[0] = (byte) value;
+                    sdl.write(buf, 0, 1);
                 }
             }
         }
-        System.out.println("Dual bit error correction failed");
-        return 0;
-    }
-
-    public static long errorCorrection(long bchCode, int codeLength, long generator, int generatorLength){
-
-
-        System.out.println("\nInit single bit error correction");
-        long result = singleBitErrorCorrection(bchCode, codeLength, generator, generatorLength);
-
-        if(result == 0){
-            System.out.println("Init dual bit error correction");
-            result = dualBitErrorCorrection(bchCode, codeLength, generator, generatorLength);
-        }
-
-        if(result == 0){
-            System.out.println("\n\nError correction failed :c");
-            return 0;
-        }else{
-            return result;
-        }
 
     }
+
 
     public static void main(String[] args) {
 
-        //String s_data = "100000110100000101010";
-
-        //generator bit needs to start with 1 !!!! otherwise it makes no sense
-        //String s_generator = "11101101001";
-
-
-        //INFO BCH(code length, data length)
-
-        String s_data = "011110101000100111000";
-        String s_generator = "11101101001";
-        int bchCodeLength = 10;  //number of bch bits in the code (code length - data length)
-
-        int dataLength = s_data.length();
-        int generatorLength = s_generator.length();
-        int fullLength = dataLength + bchCodeLength;
+        try{
+            setupAudio();
+        }catch (LineUnavailableException e){
+            e.printStackTrace();
+        }
 
 
+        //Just to open the vox
+        messageDataArray.add("1010100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
 
-        long generator = Long.parseLong(s_generator, 2);
-        long data = Long.parseLong(s_data, 2);
+        //POCSAG data
+        messageDataArray.add("1010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101001111100110100100001010011011000011110101000100111000001100101110111101010001001110000011001011101111010100010011100000110010111011110101000100111000001100101110000100001101111010001000110100010000011010000010101010011010100011111001101001000010101110110001111010101000100000100000011100001111010100010011100000110010111011110101000100111000001100101110111101010001001110000011001011100100101101001011010010100101111011111001101001000010100110110000111101010001001110000011001011101111010100010011100000110010111011110101000100111000001100101110111101010001001110000011001011100001000011011110100010001101000100000110100000101010100110101000111110011010010000101011101100011110101010001000001000000111000011110101000100111000001100101110111101010001001110000011001011101111010100010011100000110010111001001011010010110100101001011110111110011010010000101001101100001111010100010011100000110010111011110101000100111000001100101110111101010001001110000011001011101111010100010011100000110010111000010000110111101000100011010001000001101000001010101001101010001111100110100100001010111011000111101010100010000010000001110000111101010001001110000011001011101111010100010011100000110010111011110101000100111000001100101110010010110100101101001010010111101111100110100100001010011011000011110101000100111000001100101110111101010001001110000011001011101111010100010011100000110010111011110101000100111000001100101110000100001101111010001000110100010000011010000010101010011010100011111001101001000010101110110001111010101000100000100000011100001111010100010011100000110010111011110101000100111000001100101110111101010001001110000011001011100100101101001011010010100101111");
+        //data used from https://habr.com/en/post/438906/
 
-        long newBCH = generateBCH(data, dataLength, generator, generatorLength, fullLength);
+        sendAudio();
 
-        System.out.println("\n\n---------------------------------------------------------------------------------\n\n");
+        closeAudio();
 
-        System.out.println("Checking generated String");
-        boolean result = checkBCH(newBCH, 31, generator, generatorLength);
-
-        System.out.println("\nThe code has no errors: " + result);
-
-        System.out.println("\n\n---------------------------------------------------------------------------------\n\n");
-
-        //-----------other BCH Code ----------------------------
-
-        System.out.println("Checking other Code");
-
-
-        String s_otherCode = "111101110001001110000010001011";
-
-        long otherCode = Long.parseLong(s_otherCode,2);
-
-        int otherCodeLength = s_otherCode.length();
-
-
-        result = checkBCH(otherCode, otherCodeLength, generator, generatorLength);
-
-        System.out.println("\nThe code has no errors: " + result);
-
-
-        errorCorrection(otherCode, otherCodeLength, generator, generatorLength);
     }
 }
