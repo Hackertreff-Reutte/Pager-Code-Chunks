@@ -2,7 +2,7 @@
 #include <DMASPI.h>
 #include <stdbool.h>
 #include <math.h>
-
+#include <signal.h>
 
 #define HSPI_MISO   12
 #define HSPI_MOSI   13
@@ -53,39 +53,6 @@ void write(uint8_t address, uint8_t data){
   spi.endTransaction();
 } 
 
-void setup() {
-
-  delay(5000);
-
-  Serial.begin(115200);
-
-
-  Serial.println("Setting up SPI");
-
-  rx_buf = (uint8_t*)heap_caps_malloc(BUFFER_SIZE, MALLOC_CAP_DMA);
-  tx_buf = (uint8_t*)heap_caps_malloc(BUFFER_SIZE, MALLOC_CAP_DMA);
-
-  spi.begin(HSPI, 14, 12, 13, 1);
-  //hspi = new SPIClass(HSPI);
-  //hspi->begin();
-  pinMode(HSPI_SS, OUTPUT);
-  digitalWrite(HSPI_SS, HIGH);
-
-
-  Serial.println("booting SI4432");
-  
-  //this reset is important because otherwise spi might not be working on the
-  //si4432
-  pinMode(SDN, OUTPUT);
-  digitalWrite(SDN, HIGH);
-  delay(500);
-  digitalWrite(SDN, LOW);
-
-  Serial.println("Now in IDLE");
-
-
-}
-
 
 //spi functions
 
@@ -110,6 +77,10 @@ void setTXMode(){
 
 void setRXMode(){
   write(0x07, (read(0x07) & 0b11111011) | 1 << 2);
+}
+
+void setIDLEMode(){
+  write(0x07, (read(0x07) & 0b11110010) | 1);
 }
 
 void reset(){
@@ -159,10 +130,6 @@ void setFrequency(double freq){
 
   //write the lower 8 bit for the fc  to the "Nominal Carrier Frequency 0"
   write(0x77, fc & 0xFF);
-
-  printf("send: fb: %d\n", fb);
-  printf("send: fc: %d\n", fc);
-  printf("send: hsb: %d\n", hbsel);
 
 }
 
@@ -247,7 +214,7 @@ void setDataRate(double datarate){
 }
 
 #define SOURCE_DIRECT_GPIO 0b00
-#define SOURCE_DIRECt_SPI 0b01
+#define SOURCE_DIRECT_SPI 0b01
 #define SOURCE_FIFO 0b10
 #define SOURCE_PN9 0b11
 void setModulationDataSource(uint8_t source){
@@ -413,7 +380,7 @@ void sendData(){
     setModulationType(FSK);
     delay(100);
     Serial.println("Setting Modulation Source");
-    setModulationDataSource(SOURCE_DIRECt_SPI);
+    setModulationDataSource(SOURCE_DIRECT_SPI);
     delay(100);
     Serial.println("Setting Modulation CLK Source");
     setDirectClockSource(NO_TX_DATA_CLK);
@@ -483,8 +450,8 @@ void sendData(){
 
     delay(100);
 
-    //Serial.println("Reset");
-   // reset();
+    Serial.println("Reset");
+    reset();
 }
 
 //datarate in kbps / deviation in khz / manchester = 1 (true) or 0 (false)
@@ -787,31 +754,350 @@ void setCrystalLoadCap(uint8_t load){
   write(0x09, (read(0x09) & 0b10000000) | (load & 0b01111111));
 }
 
+
+
+
+//---------POCSAG STUFF----------------
+
+#define DATARATE 1.2
+#define DEVIATION 4.5
+#define FREQUENCY 433
+
+#define INTERRUPT_PIN 5
+#define RX_CLOCK_PIN 18
+#define RX_DATA_PIN 19
+#define RSSI_PIN 21
+
+#define RSSI_RELATIVE_NO_SIGNAL_INDICATOR 0.9
+
+volatile sig_atomic_t si4432_isr = 0;
+volatile sig_atomic_t si4432_active_receive = 0;
+double signal_rssi = 0;
+volatile sig_atomic_t si4432_count = 0;
+volatile sig_atomic_t si4432_count_shift = 0;
+
+void si4432_ISR(){
+  si4432_isr = 1;
+}
+
+
+void si4432_rx_clock_isr(){
+
+  //prevent buffer overflow
+  if(si4432_count >= BUFFER_SIZE){
+    return;
+  }
+
+  tx_buf[si4432_count] |= digitalRead(RX_DATA_PIN) << (7 - si4432_count_shift);
+
+  si4432_count_shift = (si4432_count_shift + 1) % 8;
+
+  if(si4432_count_shift == 0){
+    si4432_count++;
+    tx_buf[si4432_count] = 0;
+  }
+}
+
+void si4432_rssi_isr(){
+  si4432_active_receive = 2;
+}
+
+
+void si4432_ISR_handler(){
+    uint8_t status = read(0x04);
+    si4432_isr = 0;
+
+    if(((status >> 6) & 1) == 1){
+      si4432_active_receive = 1;
+
+      //update rssi
+      signal_rssi = read(0x26) * RSSI_RELATIVE_NO_SIGNAL_INDICATOR; // store the low indicator
+      write(0x27, (uint8_t) signal_rssi);
+
+      si4432_count = 0;
+      tx_buf[0] = 0;
+      attachInterrupt(digitalPinToInterrupt(RX_CLOCK_PIN), si4432_rx_clock_isr, RISING);
+      attachInterrupt(digitalPinToInterrupt(RSSI_PIN), si4432_rssi_isr, FALLING);
+    }
+}
+
+
+
+void setupSI4432Pocsag(){
+  setFrequency(FREQUENCY);
+  setDeviation(DEVIATION);
+  setDataRate(DATARATE);
+  setModulationType(FSK);
+  disablePacketHandler();
+  setPreamble(72,20);
+  setSYNC_Word(SYNC_WORD_4Byte, 0b10000011001011011110101000100111);  
+  setupModem(DATARATE,DEVIATION,0);
+  setModulationDataSource(SOURCE_DIRECT_SPI);
+  setDirectClockSource(NO_TX_DATA_CLK);
+
+  pinMode(RX_CLOCK_PIN, INPUT);
+  pinMode(RX_DATA_PIN, INPUT);
+  pinMode(INTERRUPT_PIN, INPUT);
+  pinMode(RSSI_PIN, INPUT);
+
+  write(0x06, 0b01000000); // disable interrupt (only Preamble interrupt)
+
+  enableRXOutputPins();
+  write(0x0D, 0b11100); //RSSI clear channel indicator on GPIO 2
+
+  //register interrupt
+  attachInterrupt(digitalPinToInterrupt(INTERRUPT_PIN), si4432_ISR, FALLING);
+
+  read(0x07); //reset interrupts by reading register interrupt register
+}
+
+void sendTestData(){
+    
+    setTXMode();
+
+    uint8_t * tx_temp = tx_buf;
+    tx_temp = add32Bit(tx_temp, 0b01010101010101010101010101010101);
+    tx_temp = add32Bit(tx_temp, 0b01010101010101010101010101010101);
+    tx_temp = add32Bit(tx_temp, 0b01010101010101010101010101010101);
+    tx_temp = add32Bit(tx_temp, 0b01010101010101010101010101010101);
+    tx_temp = add32Bit(tx_temp, 0b01010101010101010101010101010101);
+    tx_temp = add32Bit(tx_temp, 0b01010101010101010101010101010101);
+    tx_temp = add32Bit(tx_temp, 0b01010101010101010101010101010101);
+    tx_temp = add32Bit(tx_temp, 0b01010101010101010101010101010101);
+    tx_temp = add32Bit(tx_temp, 0b01010101010101010101010101010101);
+    tx_temp = add32Bit(tx_temp, 0b01010101010101010101010101010101);
+    tx_temp = add32Bit(tx_temp, 0b01010101010101010101010101010101);
+    tx_temp = add32Bit(tx_temp, 0b01010101010101010101010101010101);
+    tx_temp = add32Bit(tx_temp, 0b01010101010101010101010101010101);
+    tx_temp = add32Bit(tx_temp, 0b01010101010101010101010101010101);
+    tx_temp = add32Bit(tx_temp, 0b01010101010101010101010101010101);
+    tx_temp = add32Bit(tx_temp, 0b01010101010101010101010101010101);
+    tx_temp = add32Bit(tx_temp, 0b01010101010101010101010101010101);
+    tx_temp = add32Bit(tx_temp, 0b01010101010101010101010101010101);
+    tx_temp = add32Bit(tx_temp, 0b10000011001011011110101000100111);
+    tx_temp = add32Bit(tx_temp, 0b10000101011101100011111001101000);
+    tx_temp = add32Bit(tx_temp, 0b10000101011101100011111001101000);
+    tx_temp = add32Bit(tx_temp, 0b11111111111010110000001100001100);
+    tx_temp = add32Bit(tx_temp, 0b01101010010110000110011111101011);
+    tx_temp = add32Bit(tx_temp, 0b00110100011111011111011010011000);
+    tx_temp = add32Bit(tx_temp, 0b01000001100011110001111010011000);
+    tx_temp = add32Bit(tx_temp, 0b00100111110000111011101110000010);
+    tx_temp = add32Bit(tx_temp, 0b01101011100110110010011000101001);
+    tx_temp = add32Bit(tx_temp, 0b01100111111111111111110011010000);
+    tx_temp = add32Bit(tx_temp, 0b10000101011101100011111001101000);
+    tx_temp = add32Bit(tx_temp, 0b10000101011101100011111001101000);
+    tx_temp = add32Bit(tx_temp, 0b10000101011101100011111001101000);
+    tx_temp = add32Bit(tx_temp, 0b10000101011101100011111001101000);
+    tx_temp = add32Bit(tx_temp, 0b10000101011101100011111001101000);
+    tx_temp = add32Bit(tx_temp, 0b10000101011101100011111001101000);
+    tx_temp = add32Bit(tx_temp, 0b10000101011101100011111001101000);
+    tx_temp = add32Bit(tx_temp, 0b10000011001011011110101000100111);
+    tx_temp = add32Bit(tx_temp, 0b10000101011101100011111001101000);
+    tx_temp = add32Bit(tx_temp, 0b10000101011101100011111001101000);
+    tx_temp = add32Bit(tx_temp, 0b11111111111010110000001100001100);
+    tx_temp = add32Bit(tx_temp, 0b01101010010110000110011111101011);
+    tx_temp = add32Bit(tx_temp, 0b00110100011111011111011010011000);
+    tx_temp = add32Bit(tx_temp, 0b01000001100011110001111010011000);
+    tx_temp = add32Bit(tx_temp, 0b00100111110000111011101110000010);
+    tx_temp = add32Bit(tx_temp, 0b01101011100110110010011000101001);
+    tx_temp = add32Bit(tx_temp, 0b01100111111111111111110011010000);
+    tx_temp = add32Bit(tx_temp, 0b10000101011101100011111001101000);
+    tx_temp = add32Bit(tx_temp, 0b10000101011101100011111001101000);
+    tx_temp = add32Bit(tx_temp, 0b10000101011101100011111001101000);
+    tx_temp = add32Bit(tx_temp, 0b10000101011101100011111001101000);
+    tx_temp = add32Bit(tx_temp, 0b10000101011101100011111001101000);
+    tx_temp = add32Bit(tx_temp, 0b10000101011101100011111001101000);
+    tx_temp = add32Bit(tx_temp, 0b10000101011101100011111001101000);
+  
+
+    //DMA SPI (could change in the final release, but is not that hard to implement)
+    spi.beginTransaction(HSPI, SPI_MODE0, DATARATE * 1000);
+    spi.transfer(1632, tx_buf, rx_buf); 
+    spi.endTransaction();
+
+    setIDLEMode();
+}
+
+
+void sendUARTData(){
+
+  char c;
+  int i = 0;
+
+  int bcount = 7;
+  uint8_t tx_byte = 0;
+
+  while(!Serial.available()){
+    __asm__("nop");
+  }
+  while((c = Serial.read()) != 'T'){
+    
+    if(c == '0' || c == '1'){
+      tx_byte |= ((c - 48) & 1) << bcount;
+      bcount--;
+
+      if(bcount == -1){
+        bcount = 7;
+        tx_buf[i] = tx_byte;
+        tx_byte = 0;
+        i++;
+      }
+    }
+
+    while(!Serial.available()){
+      __asm__("nop");
+    }
+  }
+
+  tx_buf[i] = tx_byte; 
+
+
+  setTXMode();
+  spi.beginTransaction(HSPI, SPI_MODE0, DATARATE * 1000);
+  spi.transfer((i + 1) * 8, tx_buf, rx_buf); 
+  spi.endTransaction();
+
+  setIDLEMode();
+}
+
+
+
+//-------------------- arduino stuff---------------------
+
+void setup() {
+
+  delay(5000);
+
+  Serial.begin(115200);
+
+
+  Serial.println("Setting up SPI");
+
+  rx_buf = (uint8_t*)heap_caps_malloc(BUFFER_SIZE, MALLOC_CAP_DMA);
+  tx_buf = (uint8_t*)heap_caps_malloc(BUFFER_SIZE, MALLOC_CAP_DMA);
+
+  spi.begin(HSPI, 14, 12, 13, 1);
+  //hspi = new SPIClass(HSPI);
+  //hspi->begin();
+  pinMode(HSPI_SS, OUTPUT);
+  digitalWrite(HSPI_SS, HIGH);
+
+
+  Serial.println("booting SI4432");
+  
+  //this reset is important because otherwise spi might not be working on the
+  //si4432
+  pinMode(SDN, OUTPUT);
+  digitalWrite(SDN, HIGH);
+  delay(500);
+  digitalWrite(SDN, LOW);
+  delay(1000); // wait for the chip to boot
+  Serial.println("Now in IDLE");
+
+  
+  //remove this code if you don't want to have it configured for pocsag
+  setupSI4432Pocsag();
+
+}
+
+//C101
+//C91T!
+
 void loop() {
   
   if(Serial.available()){
 
-    //--------do spi stuff here-------
-    
-    //receive();
-    //enableRXOutputPins();
-    
-    
-    setOffset(0);
-    setCrystalLoadCap(127);
-    sendData();
-    reset();
+    /*
+    T! = test send
+    TX <data (0/1)> T = send data
+    C[num] = calibrate quarz (105)
+    RX = receive
+    ID = idle
+    */
+
+    char opt = Serial.read();
+
+    //calibrate
+    if(opt == 'C'){
+      uint8_t offset = Serial.readString().toInt();
+      setCrystalLoadCap(offset);
+    }
+
+    if(opt == 'R'){
+
+      while(!Serial.available()){
+        __asm__("nop");
+      }
+      opt = Serial.read();
+
+      if(opt == 'X'){
+        setRXMode();
+        read(0x07);
+      }
+    }
+
+    if(opt == 'I'){
+
+      while(!Serial.available()){
+        __asm__("nop");
+      }
+      opt = Serial.read();
+
+      if(opt == 'D'){
+        setIDLEMode();
+        read(0x07);
+      }
+    }
+
+    //transmit 
+    if(opt == 'T'){
+      while(!Serial.available()){
+        __asm__("nop");
+      }
+      opt = Serial.read();
       
-    
+      //! send test data
+      if(opt == '!'){
+        sendTestData();
+      }
 
-    //sendData(); 
-    //---------------------------------
+      //X transmitt
+      if(opt == 'X'){
+        sendUARTData();
+      }
+    }
 
-    delay(1500);
     while(Serial.available()){
       Serial.read();
     }
   }
-  //printPreambleAndSyncStatus();
-  delay(100);
+
+
+  if(si4432_isr){
+    si4432_ISR_handler();
+  }
+
+  if(si4432_active_receive >= 1){
+    if(si4432_active_receive >= 2){
+      si4432_active_receive = 0;
+      detachInterrupt(digitalPinToInterrupt(RX_CLOCK_PIN));
+      detachInterrupt(digitalPinToInterrupt(RSSI_PIN));
+      setIDLEMode();
+
+      //send the data
+      for(int i = 0; i < si4432_count; i++){
+        for(int j = 7; j >= 0; j--){
+          if(((tx_buf[i] >> j) & 1) == 1){
+            Serial.print("1");
+          }else{
+            Serial.print("0");
+          }
+        }
+      }
+      delay(100);
+
+      //return to RX MODE
+      setRXMode();
+    }
+  }
 }
