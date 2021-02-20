@@ -912,7 +912,7 @@ void sendTestData(){
 
     //DMA SPI (could change in the final release, but is not that hard to implement)
     spi.beginTransaction(HSPI, SPI_MODE0, DATARATE * 1000);
-    spi.transfer(1632, tx_buf, rx_buf); 
+    spi.transfer(1664, tx_buf, rx_buf); 
     spi.endTransaction();
 
     setIDLEMode();
