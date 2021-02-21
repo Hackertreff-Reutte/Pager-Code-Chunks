@@ -36,7 +36,7 @@ def decode_numeric(data):
     return text
 
 
-DEBUG = False
+DEBUG = True
 
 def decode(data):
     #find sync with preamble 
@@ -83,25 +83,29 @@ def decode(data):
                 if DEBUG:
                     print("Code: " + codeword)
 
-                #parity check
-                valid_parity = len(codeword[:31].replace('0','')) % 2 == int(codeword[31])
-                valid_bch = bch_check(codeword[:31]) == 0
-                
-                if valid_parity and valid_bch:
-                    valid_codewords.append(codeword)
-                    if DEBUG:
-                        print("found valid codeword")
 
-                #maybe do something here
-                elif valid_bch:
-                    valid_codewords.append(codeword)
-                    if DEBUG:
-                        print("Found valid codeword w/ parity")
-                
+                if len(codeword) == 32:
+                    #parity check
+                    valid_parity = len(codeword[:31].replace('0','')) % 2 == int(codeword[31])
+                    valid_bch = bch_check(codeword[:31]) == 0
+                    
+                    if valid_parity and valid_bch:
+                        valid_codewords.append(codeword)
+                        if DEBUG:
+                            print("found valid codeword")
+
+                    #maybe do something here
+                    elif valid_bch:
+                        valid_codewords.append(codeword)
+                        if DEBUG:
+                            print("Found valid codeword w/ parity")
+                    
+                    else:
+                        #fix code word
+
+                        print("Found invalid codeword")
                 else:
-                    #fix code word
-
-                    print("Found invalid codeword")
+                    print("codeword is not 32 bit (len: + " + len(codeword) + ")")
     
         else:
             print("Invalid Batch length: " + str(len(batch) / 32))
