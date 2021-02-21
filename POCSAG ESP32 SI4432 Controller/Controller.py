@@ -96,6 +96,12 @@ def sendDatarate():
     ser.write(b'D')
     ser.write(new_datarate.encode('ascii'))
 
+def setModemBandwidth():
+    new_modem_deviation = input("Modem bandwidth deviation [kHz]: ")
+    print("Setting modem deviation for bandwidth to: " + new_modem_deviation)
+    ser.write(b'M')
+    ser.write(new_modem_deviation.encode('ascii'))
+
 def printHelp():
     print("T     send custom POCSAG message")
     print("C     change quarz / crystal offset of si4432")
@@ -105,14 +111,16 @@ def printHelp():
     print("B     reboot the si4432")
     print("F     change RX/TX frequency [MHz]")
     print("D     change RX/TX datarate [kbps]")
+    print("M     change the modem bandwidth via the modem deviation")
+    print("Q     quit the program")
 
     #insert new stuff bevor this
     print("?     print this")
 
-#serialPort = input('Serial Port: ')
-#ser = serial.Serial(serialPort, 115200, timeout=1)
+serialPort = input('Serial Port: ')
+ser = serial.Serial(serialPort, 115200, timeout=1)
 
-ser = serial.Serial('/dev/ttyUSB1', 115200, timeout=0.1)
+#ser = serial.Serial('/dev/ttyUSB0', 115200, timeout=0.1)
 
 input_queue = queue.Queue()
 input_thread = threading.Thread(target=add_input, args=(input_queue,))
@@ -149,6 +157,10 @@ while True:
         
         if command.upper() == 'D':
             sendDatarate()
+
+        if command.upper() == 'Q':
+            ser.close()
+            quit()
 
         #insert new stuff bevor this
         if command == '?':
