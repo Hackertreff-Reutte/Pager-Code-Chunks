@@ -762,6 +762,7 @@ void setCrystalLoadCap(uint8_t load){
 double DATARATE = 1.2;
 #define DEVIATION 4.5
 double FREQUENCY = 433;
+double MODEM_DEVIATION = DEVIATION * 4;
 
 #define INTERRUPT_PIN 5
 #define RX_CLOCK_PIN 18
@@ -835,7 +836,7 @@ void setupSI4432Pocsag(){
   disablePacketHandler();
   setPreamble(72,20);
   setSYNC_Word(SYNC_WORD_4Byte, 0b10000011001011011110101000100111);  
-  setupModem(DATARATE,DEVIATION,0);
+  setupModem(DATARATE,MODEM_DEVIATION,0);
   setModulationDataSource(SOURCE_DIRECT_SPI);
   setDirectClockSource(NO_TX_DATA_CLK);
 
@@ -1041,8 +1042,16 @@ void loop() {
     if(opt == 'D'){
       DATARATE = Serial.readString().toDouble();
       setDatarate(DATARATE);
+      setupModem(DATARATE,MODEM_DEVIATION,0);
       Serial.print("Set datarate to: ");
       Serial.println(DATARATE);
+    }
+
+    //change moden bandwith via deviation
+    if(opt == 'M'){
+      MODEM_DEVIATION = Serial.readString().toDouble();
+      setupModem(DATARATE,MODEM_DEVIATION,0);
+      Serial.print("Set modem bandwidth");
     }
 
     //chang to RX mode
