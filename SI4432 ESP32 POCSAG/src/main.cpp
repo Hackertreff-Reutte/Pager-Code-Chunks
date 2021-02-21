@@ -184,7 +184,7 @@ void setDeviation(double deviation){
 }
 
 //datarate in kbps (3kbps = 3)
-void setDataRate(double datarate){
+void setDatarate(double datarate){
 
   uint8_t txdtrtscale;
   double scale;
@@ -374,7 +374,7 @@ void sendData(){
     setDeviation(4.5);
     delay(100);
     Serial.println("Setting Datarate");
-    setDataRate(1.2);
+    setDatarate(1.2);
     delay(100);
     Serial.println("Setting Modulation");
     setModulationType(FSK);
@@ -723,7 +723,7 @@ void receive(){
   setDeviation(4.5);
   delay(100);
   Serial.println("Setting Datarate");
-  setDataRate(1.2);
+  setDatarate(1.2);
   delay(100);
   Serial.println("Setting Modulation");
   setModulationType(FSK);
@@ -759,9 +759,9 @@ void setCrystalLoadCap(uint8_t load){
 
 //---------POCSAG STUFF----------------
 
-#define DATARATE 1.2
+double DATARATE = 1.2;
 #define DEVIATION 4.5
-#define FREQUENCY 433
+double FREQUENCY = 433;
 
 #define INTERRUPT_PIN 5
 #define RX_CLOCK_PIN 18
@@ -776,15 +776,19 @@ double signal_rssi = 0;
 volatile sig_atomic_t si4432_count = 0;
 volatile sig_atomic_t si4432_count_shift = 0;
 
-void si4432_ISR(){
+void IRAM_ATTR si4432_ISR(){
   si4432_isr = 1;
 }
 
 
-void si4432_rx_clock_isr(){
+void IRAM_ATTR si4432_rx_clock_isr(){
 
   //prevent buffer overflow
   if(si4432_count >= BUFFER_SIZE){
+    return;
+  }
+
+  if(digitalRead(RX_CLOCK_PIN) == LOW){
     return;
   }
 
@@ -798,7 +802,7 @@ void si4432_rx_clock_isr(){
   }
 }
 
-void si4432_rssi_isr(){
+void IRAM_ATTR si4432_rssi_isr(){
   si4432_active_receive = 2;
 }
 
@@ -816,8 +820,8 @@ void si4432_ISR_handler(){
 
       si4432_count = 0;
       tx_buf[0] = 0;
-      attachInterrupt(digitalPinToInterrupt(RX_CLOCK_PIN), si4432_rx_clock_isr, RISING);
-      attachInterrupt(digitalPinToInterrupt(RSSI_PIN), si4432_rssi_isr, FALLING);
+      attachInterrupt(RX_CLOCK_PIN, si4432_rx_clock_isr, RISING);
+      attachInterrupt(RSSI_PIN, si4432_rssi_isr, FALLING);
     }
 }
 
@@ -826,7 +830,7 @@ void si4432_ISR_handler(){
 void setupSI4432Pocsag(){
   setFrequency(FREQUENCY);
   setDeviation(DEVIATION);
-  setDataRate(DATARATE);
+  setDatarate(DATARATE);
   setModulationType(FSK);
   disablePacketHandler();
   setPreamble(72,20);
@@ -846,7 +850,7 @@ void setupSI4432Pocsag(){
   write(0x0D, 0b11100); //RSSI clear channel indicator on GPIO 2
 
   //register interrupt
-  attachInterrupt(digitalPinToInterrupt(INTERRUPT_PIN), si4432_ISR, FALLING);
+  attachInterrupt(INTERRUPT_PIN, si4432_ISR, FALLING);
 
   read(0x07); //reset interrupts by reading register interrupt register
 }
@@ -1021,8 +1025,27 @@ void loop() {
     if(opt == 'C'){
       uint8_t offset = Serial.readString().toInt();
       setCrystalLoadCap(offset);
+      Serial.print("Changed offset to: ");
+      Serial.println(offset);
     }
 
+    //change frequency
+    if(opt == 'F'){
+      FREQUENCY = Serial.readString().toDouble();
+      setFrequency(FREQUENCY);
+      Serial.print("Set frequency to: ");
+      Serial.println(FREQUENCY);
+    }
+
+    //change datarate
+    if(opt == 'D'){
+      DATARATE = Serial.readString().toDouble();
+      setDatarate(DATARATE);
+      Serial.print("Set datarate to: ");
+      Serial.println(DATARATE);
+    }
+
+    //chang to RX mode
     if(opt == 'R'){
 
       while(!Serial.available()){
@@ -1033,9 +1056,11 @@ void loop() {
       if(opt == 'X'){
         setRXMode();
         read(0x07);
+        Serial.println("Now in RX");
       }
     }
 
+    //change to idle mode
     if(opt == 'I'){
 
       while(!Serial.available()){
@@ -1046,7 +1071,18 @@ void loop() {
       if(opt == 'D'){
         setIDLEMode();
         read(0x07);
+        Serial.println("Now in iDLE");
       }
+    }
+
+    //reboot si4432
+    if(opt == 'B'){
+      digitalWrite(SDN, HIGH);
+      delay(500);
+      digitalWrite(SDN, LOW);
+      delay(1000);
+      setupSI4432Pocsag();
+      Serial.println("si4432 rebooted!");
     }
 
     //transmit 
@@ -1059,11 +1095,13 @@ void loop() {
       //! send test data
       if(opt == '!'){
         sendTestData();
+        Serial.println("Sent Test-Data!");
       }
 
       //X transmitt
       if(opt == 'X'){
         sendUARTData();
+        Serial.println("Sent POCSAG message!");
       }
     }
 
@@ -1080,8 +1118,8 @@ void loop() {
   if(si4432_active_receive >= 1){
     if(si4432_active_receive >= 2){
       si4432_active_receive = 0;
-      detachInterrupt(digitalPinToInterrupt(RX_CLOCK_PIN));
-      detachInterrupt(digitalPinToInterrupt(RSSI_PIN));
+      detachInterrupt(RX_CLOCK_PIN);
+      detachInterrupt(RSSI_PIN);
       setIDLEMode();
 
       //send the data
