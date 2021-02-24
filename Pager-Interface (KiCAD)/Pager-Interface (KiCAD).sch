@@ -137,17 +137,6 @@ F 3 "~" H 950 1550 50  0001 C CNN
 	1    950  1550
 	1    0    0    -1  
 $EndComp
-$Comp
-L Device:CP C?
-U 1 1 60367868
-P 1500 1550
-F 0 "C?" H 1618 1596 50  0000 L CNN
-F 1 "4.7uF" H 1618 1505 50  0000 L CNN
-F 2 "" H 1538 1400 50  0001 C CNN
-F 3 "~" H 1500 1550 50  0001 C CNN
-	1    1500 1550
-	1    0    0    -1  
-$EndComp
 Wire Wire Line
 	950  1250 1500 1250
 Wire Wire Line
@@ -323,17 +312,6 @@ $EndComp
 Wire Wire Line
 	6150 2800 6300 2800
 $Comp
-L Device:CP C?
-U 1 1 603756E1
-P 6450 2800
-F 0 "C?" V 6195 2800 50  0000 C CNN
-F 1 "1uF" V 6286 2800 50  0000 C CNN
-F 2 "" H 6488 2650 50  0001 C CNN
-F 3 "~" H 6450 2800 50  0001 C CNN
-	1    6450 2800
-	0    1    1    0   
-$EndComp
-$Comp
 L Device:R R?
 U 1 1 6037582E
 P 6700 2350
@@ -375,17 +353,6 @@ F 2 "" H 7400 1300 50  0001 C CNN
 F 3 "" H 7400 1300 50  0001 C CNN
 	1    7400 1300
 	1    0    0    -1  
-$EndComp
-$Comp
-L Device:CP C?
-U 1 1 60377FF9
-P 7850 1450
-F 0 "C?" V 8105 1450 50  0000 C CNN
-F 1 "10uF" V 8014 1450 50  0000 C CNN
-F 2 "" H 7888 1300 50  0001 C CNN
-F 3 "~" H 7850 1450 50  0001 C CNN
-	1    7850 1450
-	0    -1   -1   0   
 $EndComp
 $Comp
 L Device:C C?
@@ -504,28 +471,6 @@ F 1 "AMS1117-3.3" H 1950 4851 50  0000 C CNN
 F 2 "Package_TO_SOT_SMD:SOT-223-3_TabPin2" H 1950 4900 50  0001 C CNN
 F 3 "http://www.advanced-monolithic.com/pdf/ds1117.pdf" H 2050 4450 50  0001 C CNN
 	1    1950 4700
-	1    0    0    -1  
-$EndComp
-$Comp
-L Device:CP C?
-U 1 1 603895A4
-P 1300 4900
-F 0 "C?" H 1418 4946 50  0000 L CNN
-F 1 "10uF" H 1418 4855 50  0000 L CNN
-F 2 "" H 1338 4750 50  0001 C CNN
-F 3 "~" H 1300 4900 50  0001 C CNN
-	1    1300 4900
-	1    0    0    -1  
-$EndComp
-$Comp
-L Device:CP C?
-U 1 1 603895FE
-P 2550 4900
-F 0 "C?" H 2668 4946 50  0000 L CNN
-F 1 "10uF" H 2668 4855 50  0000 L CNN
-F 2 "" H 2588 4750 50  0001 C CNN
-F 3 "~" H 2550 4900 50  0001 C CNN
-	1    2550 4900
 	1    0    0    -1  
 $EndComp
 Wire Wire Line
@@ -768,4 +713,59 @@ Text Label 8950 4450 3    50   ~ 0
 CS
 Wire Wire Line
 	8950 4350 8950 4450
+$Comp
+L Device:C C?
+U 1 1 603E1A86
+P 6450 2800
+F 0 "C?" V 6198 2800 50  0000 C CNN
+F 1 "1uF" V 6289 2800 50  0000 C CNN
+F 2 "" H 6488 2650 50  0001 C CNN
+F 3 "~" H 6450 2800 50  0001 C CNN
+	1    6450 2800
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:C C?
+U 1 1 603E1C23
+P 7850 1450
+F 0 "C?" V 7598 1450 50  0000 C CNN
+F 1 "10uF" V 7689 1450 50  0000 C CNN
+F 2 "" H 7888 1300 50  0001 C CNN
+F 3 "~" H 7850 1450 50  0001 C CNN
+	1    7850 1450
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:C C?
+U 1 1 603E1E7F
+P 1300 4900
+F 0 "C?" V 1048 4900 50  0000 C CNN
+F 1 "10uF" V 1139 4900 50  0000 C CNN
+F 2 "" H 1338 4750 50  0001 C CNN
+F 3 "~" H 1300 4900 50  0001 C CNN
+	1    1300 4900
+	-1   0    0    1   
+$EndComp
+$Comp
+L Device:C C?
+U 1 1 603E20BD
+P 2550 4900
+F 0 "C?" V 2298 4900 50  0000 C CNN
+F 1 "10uF" V 2389 4900 50  0000 C CNN
+F 2 "" H 2588 4750 50  0001 C CNN
+F 3 "~" H 2550 4900 50  0001 C CNN
+	1    2550 4900
+	-1   0    0    1   
+$EndComp
+$Comp
+L Device:C C?
+U 1 1 603E22DF
+P 1500 1550
+F 0 "C?" H 1385 1504 50  0000 R CNN
+F 1 "4.7uF" H 1385 1595 50  0000 R CNN
+F 2 "" H 1538 1400 50  0001 C CNN
+F 3 "~" H 1500 1550 50  0001 C CNN
+	1    1500 1550
+	-1   0    0    1   
+$EndComp
 $EndSCHEMATC

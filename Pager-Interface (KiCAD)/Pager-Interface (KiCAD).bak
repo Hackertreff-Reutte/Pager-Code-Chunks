@@ -448,16 +448,14 @@ $EndComp
 $Comp
 L power:GND #PWR?
 U 1 1 6037F357
-P 8150 4500
-F 0 "#PWR?" H 8150 4250 50  0001 C CNN
-F 1 "GND" H 8155 4327 50  0000 C CNN
-F 2 "" H 8150 4500 50  0001 C CNN
-F 3 "" H 8150 4500 50  0001 C CNN
-	1    8150 4500
+P 8000 4500
+F 0 "#PWR?" H 8000 4250 50  0001 C CNN
+F 1 "GND" H 8005 4327 50  0000 C CNN
+F 2 "" H 8000 4500 50  0001 C CNN
+F 3 "" H 8000 4500 50  0001 C CNN
+	1    8000 4500
 	1    0    0    -1  
 $EndComp
-Wire Wire Line
-	8150 4350 8150 4500
 Wire Wire Line
 	9500 3850 9700 3850
 Wire Wire Line
@@ -605,4 +603,169 @@ $EndComp
 Wire Wire Line
 	2550 4450 2550 4700
 Connection ~ 2550 4700
+$Comp
+L si4432:SI4432-Module U?
+U 1 1 6039ABF6
+P 4750 5900
+F 0 "U?" H 4750 6665 50  0000 C CNN
+F 1 "SI4432-Module" H 4750 6574 50  0000 C CNN
+F 2 "" H 5400 6450 50  0001 C CNN
+F 3 "" H 5400 6450 50  0001 C CNN
+	1    4750 5900
+	1    0    0    -1  
+$EndComp
+$Comp
+L Connector:Conn_Coaxial J?
+U 1 1 6039ADF5
+P 5900 5400
+F 0 "J?" H 6000 5376 50  0000 L CNN
+F 1 "SMA ANT" H 6000 5285 50  0000 L CNN
+F 2 "" H 5900 5400 50  0001 C CNN
+F 3 " ~" H 5900 5400 50  0001 C CNN
+	1    5900 5400
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	5250 5400 5700 5400
+Wire Wire Line
+	5900 5600 5250 5600
+Wire Wire Line
+	5250 5600 5250 5500
+Wire Wire Line
+	4250 5400 4150 5400
+Wire Wire Line
+	4150 5400 4150 5250
+Wire Wire Line
+	4250 6500 4100 6500
+Wire Wire Line
+	4100 6500 4100 6650
+$Comp
+L power:GND #PWR?
+U 1 1 603A1EF6
+P 5250 5700
+F 0 "#PWR?" H 5250 5450 50  0001 C CNN
+F 1 "GND" H 5255 5527 50  0000 C CNN
+F 2 "" H 5250 5700 50  0001 C CNN
+F 3 "" H 5250 5700 50  0001 C CNN
+	1    5250 5700
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	5250 5600 5250 5700
+Connection ~ 5250 5600
+$Comp
+L power:GND #PWR?
+U 1 1 603A3E00
+P 4150 5250
+F 0 "#PWR?" H 4150 5000 50  0001 C CNN
+F 1 "GND" H 4155 5077 50  0000 C CNN
+F 2 "" H 4150 5250 50  0001 C CNN
+F 3 "" H 4150 5250 50  0001 C CNN
+	1    4150 5250
+	-1   0    0    1   
+$EndComp
+$Comp
+L power:GND #PWR?
+U 1 1 603A3EA1
+P 4100 6650
+F 0 "#PWR?" H 4100 6400 50  0001 C CNN
+F 1 "GND" H 4105 6477 50  0000 C CNN
+F 2 "" H 4100 6650 50  0001 C CNN
+F 3 "" H 4100 6650 50  0001 C CNN
+	1    4100 6650
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	4250 5800 3900 5800
+Wire Wire Line
+	3900 5800 3900 5250
+$Comp
+L power:+3.3V #PWR?
+U 1 1 603A5FDC
+P 3900 5250
+F 0 "#PWR?" H 3900 5100 50  0001 C CNN
+F 1 "+3.3V" H 3915 5423 50  0000 C CNN
+F 2 "" H 3900 5250 50  0001 C CNN
+F 3 "" H 3900 5250 50  0001 C CNN
+	1    3900 5250
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	4250 5500 3650 5500
+Wire Wire Line
+	4250 5600 3650 5600
+Wire Wire Line
+	4250 5700 3650 5700
+Text Label 3650 5500 2    50   ~ 0
+RX_Data
+Text Label 3650 5600 2    50   ~ 0
+RX_Clock
+Text Label 3650 5700 2    50   ~ 0
+RSSI
+Wire Wire Line
+	4250 5900 3650 5900
+Wire Wire Line
+	4250 6000 3650 6000
+Wire Wire Line
+	4250 6100 3650 6100
+Wire Wire Line
+	4250 6200 3650 6200
+Text Label 3650 5900 2    50   ~ 0
+MISO
+Text Label 3650 6000 2    50   ~ 0
+MOSI
+Text Label 3650 6100 2    50   ~ 0
+CLK
+Text Label 3650 6200 2    50   ~ 0
+CS
+Wire Wire Line
+	4250 6300 3650 6300
+Wire Wire Line
+	4250 6400 3650 6400
+Text Label 3650 6300 2    50   ~ 0
+nIRQ
+Text Label 3650 6400 2    50   ~ 0
+SDN
+Text Label 9600 3250 0    50   ~ 0
+RX_Clock
+Wire Wire Line
+	9500 3250 9600 3250
+Text Label 9600 3150 0    50   ~ 0
+RX_Data
+Wire Wire Line
+	9500 3150 9600 3150
+Text Label 9600 2950 0    50   ~ 0
+RSSI
+Wire Wire Line
+	9500 2950 9600 2950
+Text Label 9600 3350 0    50   ~ 0
+nIRQ
+Wire Wire Line
+	9600 3350 9500 3350
+Text Label 9600 3550 0    50   ~ 0
+SDN
+Wire Wire Line
+	9500 3550 9600 3550
+Text Label 7500 3900 2    50   ~ 0
+MISO
+Wire Wire Line
+	7650 3900 7500 3900
+Text Label 8250 4450 3    50   ~ 0
+MOSI
+Wire Wire Line
+	8150 4350 8150 4450
+Wire Wire Line
+	8150 4450 8000 4450
+Wire Wire Line
+	8000 4450 8000 4500
+Wire Wire Line
+	8250 4350 8250 4450
+Text Label 7500 3800 2    50   ~ 0
+CLK
+Wire Wire Line
+	7650 3800 7500 3800
+Text Label 8950 4450 3    50   ~ 0
+CS
+Wire Wire Line
+	8950 4350 8950 4450
 $EndSCHEMATC
