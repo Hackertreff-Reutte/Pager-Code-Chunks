@@ -1,3 +1,4 @@
 (sym_lib_table
   (lib (name ESP32)(type Legacy)(uri ${KIPRJMOD}/symbols-lib/ESP32.lib)(options "")(descr ""))
+  (lib (name si4432)(type Legacy)(uri "/home/alex/Development/Pager-Code-Chunks/Pager-Interface (KiCAD)/symbols-lib/si4432.lib")(options "")(descr ""))
 )
