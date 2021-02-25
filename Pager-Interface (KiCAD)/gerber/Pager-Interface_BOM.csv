@@ -1,0 +1,9 @@
+Comment,Designator,Footprint,LCSC Part Number
+4.7uF,C3,Capacitor_SMD:C_0805_2012Metric_Pad1.15x1.40mm_HandSolder,C1746
+100nF,"C1,C4,C8",Capacitor_SMD:C_0805_2012Metric_Pad1.15x1.40mm_HandSolder,C62912
+1uF,C6,Capacitor_SMD:C_0805_2012Metric_Pad1.15x1.40mm_HandSolder,C282736
+10uF,"C2,C5,C7",Capacitor_SMD:C_0805_2012Metric_Pad1.15x1.40mm_HandSolder,C15850
+BC817,"Q1,Q2",Package_TO_SOT_SMD:SOT-23,C8589
+10k,"R1,R2,R3",Resistor_SMD:R_0805_2012Metric_Pad1.15x1.40mm_HandSolder,C36231
+AMS1117-3.3,U1,Package_TO_SOT_SMD:SOT-223-3_TabPin2,C6186
+CP2102N-A01-GQFN28,U2,CP2102:CP2102-GQFN28,C6568

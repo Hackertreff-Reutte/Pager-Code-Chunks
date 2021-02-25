@@ -1,4 +1,6 @@
 (fp_lib_table
   (lib (name ESP32)(type KiCad)(uri ${KIPRJMOD}/footprints-lib/ESP32)(options "")(descr ""))
   (lib (name "SI4432 Module")(type KiCad)(uri ${KIPRJMOD}/footprints-lib/SI4432)(options "")(descr ""))
+  (lib (name CP2102)(type KiCad)(uri ${KIPRJMOD}/footprints-lib/CP2102)(options "")(descr ""))
+  (lib (name HTR)(type KiCad)(uri ${KIPRJMOD}/footprints-lib/HTR)(options "")(descr ""))
 )
