@@ -1,15 +1,24 @@
-This folder contains 2 scripts
+# POCSAG Encoder
 
-One to create and print a encoded pocsag message that can be used to copy
-into the c code of the ESP programm (see example code)
+This folder contains 2 scripts.
+
+One can be used to create code that can be used in the esp32 project 
+to hardcode POCSAG messages. (Look at the SI4432 ESP32 code for an example).
+
+The other script interacts with the ESP32 project directly to send 
+POCSAG messages.
 
 
-the other script interacts with the esp directly and can be used to send 
-data to the esp that will be transmitted afterward. 
-The script may work, but it is most likely a better idea to use the script
-int the controller folder, because it has a lot more useful functions and is
-better maintained.
+The first script is quite useful, but only in the specific project that I 
+created.
 
-the pocsag.py file is only used a a module.
+The otherone is more or less useless and only here for documentation sake.
+If you want to interface with my project I would highly recommend to use the
+newer version (POCSAG ESP32 SI4432 Controller) 
 
-Big thanks to https://github.com/cuddlycheetah for creating it.
+
+Both of those script use the pocsag.py to create POCSAG messages.
+And at this point I want to shout out and give a big thank you to 
+https://github.com/cuddlycheetah for creating it.
+
+
