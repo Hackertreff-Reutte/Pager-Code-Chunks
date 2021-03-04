@@ -755,6 +755,20 @@ void setCrystalLoadCap(uint8_t load){
 }
 
 
+#define SI4432_GPIO0 0x0B
+#define SI4432_GPIO1 0x0C
+#define SI4432_GPIO2 0x0D
+
+void setGPIO(uint8_t gpio, uint8_t function){
+
+  if(gpio > 0x0D ||gpio < 0x0B){
+    Serial.println("Invalid GPIO pin");
+    return;
+  }
+
+  write(gpio, function & 0b11111);
+}
+
 
 
 //---------POCSAG STUFF----------------
